@@ -4,7 +4,6 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.android.hilt)
     alias(libs.plugins.kotlin.ksp)
-    alias(libs.plugins.google.services)
 }
 
 android {
@@ -15,8 +14,8 @@ android {
         applicationId = "fr.uptrash.fuckupplanning"
         minSdk = 24
         targetSdk = 36
-        versionCode = 12
-        versionName = "1.7"
+        versionCode = 13
+        versionName = "1.8"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
