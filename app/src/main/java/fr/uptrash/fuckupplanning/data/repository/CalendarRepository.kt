@@ -17,28 +17,18 @@ class CalendarRepository @Inject constructor(
 ) {
     suspend fun getEvents(): Result<List<Event>> = withContext(Dispatchers.IO) {
         try {
-            // Fetch both S1 and S2 calendar data
-            // Get the selected MMI year from settings
             val selectedMMIYear = settingsRepository.selectedMMIYearFlow.first()
 
-            // Parse events from both calendars
-            // Fetch both S1 and S2 calendar data based on selected MMI year
-            val s1ICalData = when (selectedMMIYear) {
-                MMIYear.MMI1 -> apiService.getS1MMI1ICalData()
-                MMIYear.MMI2 -> apiService.getS1MMI2ICalData()
-                MMIYear.MMI3 -> apiService.getS1MMI3ICalData()
-            }
+            // Retrieve dynamic URLs based on the selected MMI year
+            val s1Url = settingsRepository.getS1Url(selectedMMIYear).first()
+            val s2Url = settingsRepository.getS2Url(selectedMMIYear).first()
 
-            val s2ICalData = when (selectedMMIYear) {
-                MMIYear.MMI1 -> apiService.getS2MMI1ICalData()
-                MMIYear.MMI2 -> apiService.getS2MMI2ICalData()
-                MMIYear.MMI3 -> apiService.getS2MMI3ICalData()
-            }
+            val s1ICalData = apiService.getICalDataFromUrl(s1Url)
+            val s2ICalData = apiService.getICalDataFromUrl(s2Url)
 
             val s1Events = parser.parseICalData(s1ICalData)
             val s2Events = parser.parseICalData(s2ICalData)
 
-            // Combine and sort all events by start time
             val allEvents = (s1Events + s2Events).sortedBy { it.startDateTime }
 
             Result.success(allEvents)

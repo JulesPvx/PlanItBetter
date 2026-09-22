@@ -32,6 +32,11 @@ interface SettingsRepository {
     suspend fun saveSelectedMMIYear(mmiYear: MMIYear)
     suspend fun saveSelectedAppTheme(appTheme: AppTheme)
     suspend fun saveSelectedAppThemeMode(themeMode: ThemeMode)
+    suspend fun saveS1Url(year: MMIYear, url: String)
+    suspend fun saveS2Url(year: MMIYear, url: String)
+    fun getS1Url(year: MMIYear): Flow<String>
+    fun getS2Url(year: MMIYear): Flow<String>
+    suspend fun resetUrls(year: MMIYear)
 }
 
 class SettingsRepositoryImpl(
@@ -43,6 +48,7 @@ class SettingsRepositoryImpl(
         val KEY_SELECTED_MMI_YEAR = stringPreferencesKey("selected_mmi_year")
         val KEY_SELECTED_APP_THEME = stringPreferencesKey("selected_app_theme")
         val KEY_SELECTED_APP_THEME_MODE = stringPreferencesKey("selected_app_theme_mode")
+        private const val BASE_URL = "https://upplanning.appli.univ-poitiers.fr/"
     }
 
     override val selectedTPGroupFlow: Flow<TPGroup> = dataStore.data
@@ -106,6 +112,55 @@ class SettingsRepositoryImpl(
     override suspend fun saveSelectedAppThemeMode(themeMode: ThemeMode) {
         dataStore.edit { prefs ->
             prefs[KEY_SELECTED_APP_THEME_MODE] = themeMode.key
+        }
+    }
+
+    override fun getS1Url(year: MMIYear): Flow<String> {
+        val key = stringPreferencesKey("s1_url_${year.name}")
+        val defaultUrl = when (year) {
+            MMIYear.MMI1 -> "${BASE_URL}jsp/custom/modules/plannings/anonymous_cal.jsp?resources=18300&projectId=17&calType=ical&nbWeeks=28"
+            MMIYear.MMI2 -> "${BASE_URL}jsp/custom/modules/plannings/anonymous_cal.jsp?resources=21212&projectId=17&calType=ical&nbWeeks=28"
+            MMIYear.MMI3 -> "${BASE_URL}jsp/custom/modules/plannings/anonymous_cal.jsp?resources=2450&projectId=17&calType=ical&nbWeeks=28"
+        }
+
+        return dataStore.data.map { preferences ->
+            preferences[key] ?: defaultUrl
+        }
+    }
+
+    override fun getS2Url(year: MMIYear): Flow<String> {
+        val key = stringPreferencesKey("s2_url_${year.name}")
+        val defaultUrl = when (year) {
+            MMIYear.MMI1 -> "${BASE_URL}jsp/custom/modules/plannings/anonymous_cal.jsp?resources=21211&projectId=17&calType=ical&nbWeeks=28"
+            MMIYear.MMI2 -> "${BASE_URL}jsp/custom/modules/plannings/anonymous_cal.jsp?resources=21298&projectId=17&calType=ical&nbWeeks=28"
+            MMIYear.MMI3 -> "${BASE_URL}jsp/custom/modules/plannings/anonymous_cal.jsp?resources=2471&projectId=17&calType=ical&nbWeeks=28"
+        }
+
+        return dataStore.data.map { preferences ->
+            preferences[key] ?: defaultUrl
+        }
+    }
+
+    override suspend fun saveS1Url(year: MMIYear, url: String) {
+        val key = stringPreferencesKey("s1_url_${year.name}")
+        dataStore.edit { preferences ->
+            preferences[key] = url
+        }
+    }
+
+    override suspend fun saveS2Url(year: MMIYear, url: String) {
+        val key = stringPreferencesKey("s2_url_${year.name}")
+        dataStore.edit { preferences ->
+            preferences[key] = url
+        }
+    }
+
+    override suspend fun resetUrls(year: MMIYear) {
+        val s1Key = stringPreferencesKey("s1_url_${year.name}")
+        val s2Key = stringPreferencesKey("s2_url_${year.name}")
+        dataStore.edit { preferences ->
+            preferences.remove(s1Key)
+            preferences.remove(s2Key)
         }
     }
 }

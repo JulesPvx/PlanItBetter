@@ -156,4 +156,10 @@
     <string name="end_time_desc">End time</string>
     <string name="duration_desc">Duration</string>
     <string name="settings_desc">Settings</string>
+    <string name="nav_url_config">Configuration</string>
+    <string name="url_configuration">Configuration des URLs</string>
+    <string name="semester_1_url">URL du semestre 1</string>
+    <string name="semester_2_url">URL du semestre 2</string>
+    <string name="save_urls">Sauvegarder les URLs</string>
+    <string name="reset">Réinitialiser</string>
 </resources>

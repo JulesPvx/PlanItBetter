@@ -4,6 +4,7 @@ import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.ui.graphics.vector.ImageVector
 
 enum class Destination(
@@ -18,10 +19,10 @@ enum class Destination(
         label = R.string.nav_calendar,
         contentDescription = "Calendar screen"
     ),
-    HOMEWORK(
-        route = "homework",
-        icon = Icons.Filled.Book,
-        label = R.string.nav_homework,
-        contentDescription = "Homework screen"
-    );
+    URL_CONFIG(
+        route = "url_config",
+        icon = Icons.Filled.Link,
+        label = R.string.nav_url_config,
+        contentDescription = "URL Configuration screen"
+    )
 }
