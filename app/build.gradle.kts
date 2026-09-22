@@ -14,8 +14,8 @@ android {
         applicationId = "fr.uptrash.fuckupplanning"
         minSdk = 24
         targetSdk = 36
-        versionCode = 13
-        versionName = "1.8"
+        versionCode = 14
+        versionName = "2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -43,14 +43,6 @@ android {
 }
 
 dependencies {
-    // Firebase
-    implementation(platform(libs.firebase.bom))
-    implementation(libs.firebase.analytics)
-    implementation(libs.firebase.database)
-    implementation(libs.firebase.auth)
-    implementation(libs.firebase.storage)
-    implementation(libs.firebase.appcheck.playintegrity)
-
     // Image loading and processing
     implementation(libs.coil.compose)
     implementation(libs.androidx.exifinterface)

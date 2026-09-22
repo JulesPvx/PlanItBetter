@@ -2,6 +2,7 @@ package fr.uptrash.fuckupplanning.data.network
 
 import retrofit2.http.GET
 import retrofit2.http.Headers
+import retrofit2.http.Url
 
 /**
  * API service interface for UPLanning application
@@ -11,6 +12,9 @@ import retrofit2.http.Headers
  * Actual endpoints will be implemented based on specific requirements.
  */
 interface ApiService {
+
+    @GET
+    suspend fun getICalDataFromUrl(@Url url: String): String
 
     /* MMI 1 */
 

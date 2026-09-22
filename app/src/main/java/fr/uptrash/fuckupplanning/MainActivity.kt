@@ -40,17 +40,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.google.firebase.Firebase
-import com.google.firebase.appcheck.appCheck
-import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory
-import com.google.firebase.initialize
 import dagger.hilt.android.AndroidEntryPoint
-import fr.uptrash.fuckupplanning.ui.auth.AuthViewModel
 import fr.uptrash.fuckupplanning.ui.calendar.CalendarScreen
 import fr.uptrash.fuckupplanning.ui.calendar.CalendarViewModel
 import fr.uptrash.fuckupplanning.ui.calendar.RestaurantMenuView
 import fr.uptrash.fuckupplanning.ui.calendar.SettingsView
-import fr.uptrash.fuckupplanning.ui.homework.HomeworkScreen
+import fr.uptrash.fuckupplanning.ui.configuration.UrlConfigScreen
 import fr.uptrash.fuckupplanning.ui.theme.FuckUpPlanningTheme
 import fr.uptrash.fuckupplanning.ui.theme.ThemeMode
 import fr.uptrash.fuckupplanning.ui.theme.ThemeViewModel
@@ -63,37 +58,12 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        Firebase.initialize(context = this)
-        Firebase.appCheck.installAppCheckProviderFactory(
-            PlayIntegrityAppCheckProviderFactory.getInstance(),
-        )
-
         setContent {
             val calendarViewModel: CalendarViewModel = hiltViewModel()
             val themeViewModel: ThemeViewModel = hiltViewModel()
-            val authViewModel: AuthViewModel = hiltViewModel()
 
             val themeUiState by themeViewModel.uiState.collectAsStateWithLifecycle()
             val calendarUiState by calendarViewModel.uiState.collectAsStateWithLifecycle()
-            val authUiState by authViewModel.uiState.collectAsStateWithLifecycle()
-
-            // Initialize anonymous authentication if user is not already authenticated
-            LaunchedEffect(Unit) {
-                if (!authUiState.isAuthenticated) {
-                    Log.d("MainActivity", "User not authenticated, signing in anonymously...")
-                    authViewModel.signInAnonymously()
-                }
-            }
-
-            // Log authentication state changes
-            LaunchedEffect(authUiState.isAuthenticated) {
-                if (authUiState.isAuthenticated) {
-                    Log.d("MainActivity", "User authenticated: ${authUiState.user?.uid}")
-                    Log.d("MainActivity", "Is anonymous: ${authUiState.user?.isAnonymous}")
-                } else {
-                    Log.d("MainActivity", "User not authenticated")
-                }
-            }
 
             val navController = rememberNavController()
             val startDestination = Destination.CALENDAR
@@ -193,10 +163,8 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
 
-                            composable(
-                                route = Destination.HOMEWORK.route
-                            ) {
-                                HomeworkScreen(
+                            composable(route = Destination.URL_CONFIG.route) {
+                                UrlConfigScreen(
                                     modifier = Modifier.fillMaxSize(),
                                     paddingValues = paddingValues
                                 )

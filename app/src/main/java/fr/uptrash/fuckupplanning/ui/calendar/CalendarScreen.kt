@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalTime::class)
+
 package fr.uptrash.fuckupplanning.ui.calendar
 
 import android.os.Build
@@ -65,6 +67,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -88,6 +91,7 @@ import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
 import kotlinx.datetime.isoDayNumber
 import kotlinx.datetime.minus
 import kotlinx.datetime.number
@@ -127,7 +131,7 @@ fun CalendarScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(48.dp),
+                        modifier = Modifier.size(28.dp),
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
@@ -192,9 +196,9 @@ fun CalendarScreen(
     uiState.selectedEvent?.let { event ->
         ModalBottomSheet(
             onDismissRequest = { calendarViewModel.dismissEventDetail() },
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            containerColor = MaterialTheme.colorScheme.surface,
             contentWindowInsets = { WindowInsets(0.dp, 0.dp, 0.dp, 0.dp) },
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         ) {
             EventDetailView(
                 event = event,
@@ -209,9 +213,9 @@ fun CalendarScreen(
             .sortedBy { it.startDateTime }
         ModalBottomSheet(
             onDismissRequest = { calendarViewModel.dismissDayCourseList() },
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            containerColor = MaterialTheme.colorScheme.surface,
             contentWindowInsets = { WindowInsets(0.dp, 0.dp, 0.dp, 0.dp) },
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         ) {
             DayCourseListView(
                 date = selectedDate,
@@ -225,7 +229,6 @@ fun CalendarScreen(
         }
     }
 }
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CalendarHeader(
@@ -235,113 +238,66 @@ fun CalendarHeader(
     onPreviousClick: () -> Unit,
     onNextClick: () -> Unit
 ) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surface
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // View mode selector
-            SingleChoiceSegmentedButtonRow(
-                modifier = Modifier.fillMaxWidth()
+            IconButton(onClick = onPreviousClick, modifier = Modifier.size(40.dp)) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.previous))
+            }
+            Column(
+                modifier = Modifier.weight(1f),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                SegmentedButton(
-                    shape = SegmentedButtonDefaults.itemShape(index = 0, count = 3),
-                    onClick = { onViewModeChange(CalendarViewMode.DAY) },
-                    selected = viewMode == CalendarViewMode.DAY,
-                    icon = {
-                        Icon(
-                            Icons.Default.CalendarViewDay,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                ) {
-                    Text(stringResource(R.string.day))
-                }
-                SegmentedButton(
-                    shape = SegmentedButtonDefaults.itemShape(index = 1, count = 3),
-                    onClick = { onViewModeChange(CalendarViewMode.WEEK) },
-                    selected = viewMode == CalendarViewMode.WEEK,
-                    icon = {
-                        Icon(
-                            Icons.Default.CalendarViewWeek,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                ) {
-                    Text(stringResource(R.string.week))
-                }
-                SegmentedButton(
-                    shape = SegmentedButtonDefaults.itemShape(index = 2, count = 3),
-                    onClick = { onViewModeChange(CalendarViewMode.MONTH) },
-                    selected = viewMode == CalendarViewMode.MONTH,
-                    icon = {
-                        Icon(
-                            Icons.Default.CalendarViewMonth,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                ) {
-                    Text(stringResource(R.string.month))
+                Text(
+                    text = formatDateRange(selectedDate, viewMode),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (viewMode == CalendarViewMode.DAY) {
+                    Text(
+                        text = getDayOfWeekDisplayName(selectedDate.dayOfWeek, full = true),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
+            IconButton(onClick = onNextClick, modifier = Modifier.size(40.dp)) {
+                Icon(Icons.AutoMirrored.Filled.ArrowForward, stringResource(R.string.next))
+            }
+        }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Date navigation
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = onPreviousClick) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = stringResource(R.string.previous)
-                    )
-                }
-
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(IntrinsicSize.Min)
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+            val modes = listOf(CalendarViewMode.DAY, CalendarViewMode.WEEK, CalendarViewMode.MONTH)
+            modes.forEachIndexed { index, mode ->
+                SegmentedButton(
+                    shape = SegmentedButtonDefaults.itemShape(index = index, count = modes.size),
+                    onClick = { onViewModeChange(mode) },
+                    selected = viewMode == mode,
+                    icon = {}
                 ) {
                     Text(
-                        text = formatDateRange(selectedDate, viewMode),
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Medium,
-                        textAlign = TextAlign.Center,
-                    )
-
-                    // Subtext for day view
-                    if (viewMode == CalendarViewMode.DAY) {
-                        Text(
-                            text = getDayOfWeekDisplayName(selectedDate.dayOfWeek, full = true),
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Normal,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
-
-                IconButton(onClick = onNextClick) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = stringResource(R.string.next)
+                        text = when (mode) {
+                            CalendarViewMode.DAY -> stringResource(R.string.day)
+                            CalendarViewMode.WEEK -> stringResource(R.string.week)
+                            CalendarViewMode.MONTH -> stringResource(R.string.month)
+                        }
                     )
                 }
             }
         }
     }
 }
+
 
 @Composable
 fun DayView(
@@ -350,213 +306,62 @@ fun DayView(
     onEventClick: (Event) -> Unit,
     paddingValues: PaddingValues
 ) {
-    val dayEvents = events.filter { it.startDateTime.date == selectedDate }
-        .sortedBy { it.startDateTime }
-
+    val dayEvents = events.filter { it.startDateTime.date == selectedDate }.sortedBy { it.startDateTime }
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(
             start = 16.dp,
             end = 16.dp,
-            top = 16.dp,
+            top = 4.dp,
             bottom = paddingValues.calculateBottomPadding() + 16.dp
         ),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         if (dayEvents.isEmpty()) {
-            item {
-                Box(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = stringResource(R.string.no_events_for_day),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
+            item { EmptyCalendarState(stringResource(R.string.no_events_for_day)) }
         } else {
-            // Add time summary card
-            item {
-                DayTimeSummary(events = dayEvents)
-            }
-
+            item { DayTimeSummary(events = dayEvents) }
             items(dayEvents) { event ->
-                EnhancedEventCard(
-                    event = event,
-                    onClick = { onEventClick(event) }
-                )
+                EnhancedEventCard(event = event, onClick = { onEventClick(event) })
             }
         }
     }
 }
+
 
 @Composable
 fun DayTimeSummary(modifier: Modifier = Modifier, events: List<Event>) {
     if (events.isEmpty()) return
-
     val sortedEvents = events.sortedBy { it.startDateTime }
     val firstEvent = sortedEvents.first()
     val lastEvent = sortedEvents.last()
-
-    // Calculate total pause time
-    var totalPauseMinutes = 0
-    for (i in 0 until sortedEvents.size - 1) {
-        val currentEventEnd = sortedEvents[i].endDateTime
-        val nextEventStart = sortedEvents[i + 1].startDateTime
-
-        val currentEndMinutes = currentEventEnd.hour * 60 + currentEventEnd.minute
-        val nextStartMinutes = nextEventStart.hour * 60 + nextEventStart.minute
-
-        if (nextStartMinutes > currentEndMinutes) {
-            totalPauseMinutes += nextStartMinutes - currentEndMinutes
-        }
-    }
-
-    // Calculate total working time
     val totalWorkingMinutes = events.sumOf { event ->
-        val startMinutes = event.startDateTime.hour * 60 + event.startDateTime.minute
-        val endMinutes = event.endDateTime.hour * 60 + event.endDateTime.minute
-        endMinutes - startMinutes
+        val start = event.startDateTime.hour * 60 + event.startDateTime.minute
+        val end = event.endDateTime.hour * 60 + event.endDateTime.minute
+        end - start
     }
 
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
-        ),
-        shape = RoundedCornerShape(16.dp)
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(
-            modifier = Modifier.padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Icon(
-                    Icons.Default.DateRange,
-                    contentDescription = stringResource(R.string.day_summary_desc),
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(24.dp)
-                )
-                Text(
-                    text = stringResource(R.string.day_summary),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                // Start Time
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(
-                        text = stringResource(R.string.start),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                    )
-                    Text(
-                        text = formatTime(firstEvent.startDateTime),
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
-
-                // End Time
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(
-                        text = stringResource(R.string.end),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                    )
-                    Text(
-                        text = formatTime(lastEvent.endDateTime),
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
-
-                // Total Events
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(
-                        text = stringResource(R.string.events),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                    )
-                    Text(
-                        text = events.size.toString(),
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
-            }
-
-            // Time breakdown row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                // Working Time
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(
-                        text = stringResource(R.string.work_time),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                    )
-                    Text(
-                        text = formatDuration(totalWorkingMinutes),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.secondary
-                    )
-                }
-
-                // Pause Time
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(
-                        text = stringResource(R.string.pause_time),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                    )
-                    Text(
-                        text = if (totalPauseMinutes > 0) formatDuration(totalPauseMinutes) else stringResource(
-                            R.string.none
-                        ),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = if (totalPauseMinutes > 0) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onPrimaryContainer.copy(
-                            alpha = 0.5f
-                        )
-                    )
-                }
-            }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "${formatTime(firstEvent.startDateTime)} – ${formatTime(lastEvent.endDateTime)}",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = "${events.size} · ${formatDuration(totalWorkingMinutes)}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
+
 
 @Composable
 fun WeekView(
@@ -567,33 +372,32 @@ fun WeekView(
     showFullDay: (LocalDate) -> Unit = { _ -> }
 ) {
     val startOfWeek = getWeekStart(selectedDate)
-    // Only show Monday to Friday (5 days instead of 7)
     val weekDays = (0..4).map { startOfWeek.plus(it, DateTimeUnit.DAY) }
-
-    val weekEvents = events.filter { event ->
-        weekDays.any { day -> event.startDateTime.date == day }
-    }.groupBy { it.startDateTime.date }
+    val weekEvents = events
+        .filter { event -> weekDays.any { day -> event.startDateTime.date == day } }
+        .groupBy { it.startDateTime.date }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(
+	        top = 4.dp,
+	        bottom = paddingValues.calculateBottomPadding() + 16.dp,
             start = 16.dp,
             end = 16.dp,
-            top = 16.dp,
-            bottom = paddingValues.calculateBottomPadding() + 16.dp
         ),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         items(weekDays) { day ->
             WeekDayCard(
                 date = day,
-                events = weekEvents[day] ?: emptyList(),
+                events = weekEvents[day].orEmpty().sortedBy { it.startDateTime },
                 onEventClick = onEventClick,
                 showFullDay = showFullDay
             )
         }
     }
 }
+
 
 @OptIn(ExperimentalTime::class)
 @Composable
@@ -621,49 +425,44 @@ fun MonthView(
     }.groupBy { it.startDateTime.date }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // Enhanced month header with only weekdays
-        Card(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer
-            ),
-            shape = RoundedCornerShape(16.dp)
+                .padding(horizontal = 16.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                listOf(
-                    DayOfWeek.MONDAY,
-                    DayOfWeek.TUESDAY,
-                    DayOfWeek.WEDNESDAY,
-                    DayOfWeek.THURSDAY,
-                    DayOfWeek.FRIDAY
-                ).forEach { dow ->
-                    Text(
-                        text = getDayOfWeekDisplayName(dow, full = false),
-                        modifier = Modifier.weight(1f),
-                        textAlign = TextAlign.Center,
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
+            listOf(
+                DayOfWeek.MONDAY,
+                DayOfWeek.TUESDAY,
+                DayOfWeek.WEDNESDAY,
+                DayOfWeek.THURSDAY,
+                DayOfWeek.FRIDAY
+            ).forEach { dow ->
+                Text(
+                    text = getDayOfWeekDisplayName(dow, full = false),
+                    modifier = Modifier.weight(1f),
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .height(1.dp)
+                .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+        )
 
         // Calendar grid with only weekdays (5 columns)
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+                .padding(horizontal = 16.dp, vertical = 6.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
             contentPadding = PaddingValues(bottom = paddingValues.calculateBottomPadding() + 16.dp)
         ) {
             // Group weekdays into weeks (5 days per row)
@@ -679,7 +478,7 @@ fun MonthView(
                             isCurrentMonth = date.month == selectedDate.month,
                             isSelected = date == selectedDate,
                             isToday = date == Clock.System.now()
-                                .toLocalDateTime(kotlinx.datetime.TimeZone.currentSystemDefault()).date,
+                                .toLocalDateTime(TimeZone.currentSystemDefault()).date,
                             events = monthEvents[date] ?: emptyList(),
                             onDateClick = onDateClick,
                             onEventClick = onEventClick,
@@ -695,7 +494,6 @@ fun MonthView(
         }
     }
 }
-
 @Composable
 fun EnhancedMonthDayCell(
     date: LocalDate,
@@ -708,71 +506,24 @@ fun EnhancedMonthDayCell(
     modifier: Modifier = Modifier
 ) {
     val backgroundColor = when {
-        isSelected -> MaterialTheme.colorScheme.primary
-        !isCurrentMonth -> MaterialTheme.colorScheme.surfaceVariant
-        isToday -> MaterialTheme.colorScheme.secondaryContainer
+        isSelected -> MaterialTheme.colorScheme.primaryContainer
+        !isCurrentMonth -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
         else -> MaterialTheme.colorScheme.surface
     }
-
     val contentColor = when {
-        isSelected -> MaterialTheme.colorScheme.onPrimary
+        isSelected -> MaterialTheme.colorScheme.onPrimaryContainer
         !isCurrentMonth -> MaterialTheme.colorScheme.onSurfaceVariant
-        isToday -> MaterialTheme.colorScheme.onSecondaryContainer
         else -> MaterialTheme.colorScheme.onSurface
-    }
-
-    // Calculate time information for the day
-    val sortedEvents = events.sortedBy { it.startDateTime }
-    val firstEvent = sortedEvents.firstOrNull()
-    val lastEvent = sortedEvents.lastOrNull()
-
-    // Calculate total working hours for the day
-    val totalWorkingMinutes = events.sumOf { event ->
-        val startMinutes = event.startDateTime.hour * 60 + event.startDateTime.minute
-        val endMinutes = event.endDateTime.hour * 60 + event.endDateTime.minute
-        endMinutes - startMinutes
-    }
-    val totalHours = totalWorkingMinutes / 60f
-
-    // Calculate outline properties based on total hours
-    // Max expected hours per day is 8, so we scale from 0 to 8 hours
-    val normalizedHours = (totalHours / 8f).coerceIn(0f, 1f)
-    val outlineOpacity = (normalizedHours * 0.8f + 0.2f).coerceIn(0.2f, 1f) // Min 0.2, max 1.0
-    val outlineWidth = (normalizedHours * 2f + 0.2f).dp // Min 0.2dp, max 2.2dp
-
-    val outlineColor = when {
-        isSelected -> MaterialTheme.colorScheme.onPrimary
-        !isCurrentMonth -> MaterialTheme.colorScheme.outline.copy(alpha = outlineOpacity * 0.5f)
-        totalHours > 0 -> MaterialTheme.colorScheme.primary.copy(alpha = outlineOpacity)
-        else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
-    }
-
-    // Calculate total pause time
-    var totalPauseMinutes = 0
-    if (sortedEvents.size > 1) {
-        for (i in 0 until sortedEvents.size - 1) {
-            val currentEventEnd = sortedEvents[i].endDateTime
-            val nextEventStart = sortedEvents[i + 1].startDateTime
-
-            val currentEndMinutes = currentEventEnd.hour * 60 + currentEventEnd.minute
-            val nextStartMinutes = nextEventStart.hour * 60 + nextEventStart.minute
-
-            if (nextStartMinutes > currentEndMinutes) {
-                totalPauseMinutes += nextStartMinutes - currentEndMinutes
-            }
-        }
     }
 
     Column(
         modifier = modifier
-            .fillMaxWidth()
-            .fillMaxHeight()
-            .clip(RoundedCornerShape(8.dp))
+            .height(78.dp)
+            .clip(RoundedCornerShape(10.dp))
             .background(backgroundColor)
-            .border(
-                width = if (events.isNotEmpty()) outlineWidth else 1.dp,
-                color = outlineColor,
-                shape = RoundedCornerShape(8.dp)
+            .then(
+                if (isToday) Modifier.border(1.5.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(10.dp))
+                else Modifier
             )
             .clickable { onDateClick(date) }
             .padding(8.dp),
@@ -780,57 +531,30 @@ fun EnhancedMonthDayCell(
     ) {
         Text(
             text = date.day.toString(),
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.Bold,
-            color = contentColor
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = if (isToday || isSelected) FontWeight.Bold else FontWeight.Medium,
+            color = if (isToday) MaterialTheme.colorScheme.primary else contentColor
         )
-
-        Spacer(modifier = Modifier.height(4.dp))
-
         if (events.isNotEmpty()) {
-            // Show time information instead of course names
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
-                // Start time
-                firstEvent?.let { event ->
-                    Text(
-                        text = formatTime(event.startDateTime),
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = contentColor
-                    )
-                }
-
-                // End time
-                lastEvent?.let { event ->
-                    Text(
-                        text = formatTime(event.endDateTime),
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = contentColor
-                    )
-                }
-
-                // Pause time (only if there are multiple events and pauses)
-                if (totalPauseMinutes > 0) {
-                    Text(
-                        text = stringResource(
-                            R.string.pause_short,
-                            formatDuration(totalPauseMinutes)
-                        ),
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Medium,
-                        color = contentColor.copy(alpha = 0.8f)
-                    )
-                }
-            }
+            Spacer(modifier = Modifier.height(6.dp))
+            val first = events.minBy { it.startDateTime }
+            val last = events.maxBy { it.endDateTime }
+            Text(
+                text = "${formatTime(first.startDateTime)}–${formatTime(last.endDateTime)}",
+                style = MaterialTheme.typography.labelSmall,
+                color = contentColor,
+                maxLines = 1
+            )
+            Text(
+                text = events.size.toString(),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
 
-@OptIn(ExperimentalTime::class)
+
 @Composable
 fun WeekDayCard(
     date: LocalDate,
@@ -838,1073 +562,349 @@ fun WeekDayCard(
     onEventClick: (Event) -> Unit,
     showFullDay: (LocalDate) -> Unit
 ) {
-    // Calculate time information for better display
-    val sortedEvents = events.sortedBy { it.startDateTime }
-    val firstEvent = sortedEvents.firstOrNull()
-    val lastEvent = sortedEvents.lastOrNull()
-
-    // Calculate total working time for the day
-    val totalWorkingMinutes = events.sumOf { event ->
-        val startMinutes = event.startDateTime.hour * 60 + event.startDateTime.minute
-        val endMinutes = event.endDateTime.hour * 60 + event.endDateTime.minute
-        endMinutes - startMinutes
-    }
-
-    // Check if it's today
     val isToday = date == Clock.System.now()
-        .toLocalDateTime(kotlinx.datetime.TimeZone.currentSystemDefault()).date
+        .toLocalDateTime(TimeZone.currentSystemDefault()).date
+    val visibleEvents = events.take(3)
+    val first = events.firstOrNull()
+    val last = events.lastOrNull()
 
-    Card(
+    Column(
         modifier = Modifier
-            .fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = when {
-                isToday -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f)
-                events.isNotEmpty() -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f)
-                else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-            }
-        ),
-        shape = RoundedCornerShape(16.dp)
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(
+                if (isToday) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
+                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+            )
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            // Enhanced header with date information
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = getDayOfWeekDisplayName(date.dayOfWeek, full = false).uppercase(),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = if (isToday) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(text = " ${date.day}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.weight(1f))
+            if (first != null && last != null) {
+                Text(
+                    text = "${formatTime(first.startDateTime)}–${formatTime(last.endDateTime)}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        if (visibleEvents.isEmpty()) {
+            Text(
+                text = stringResource(R.string.no_events),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        } else {
+            visibleEvents.forEach { event ->
+                CompactEventRow(event = event, onClick = { onEventClick(event) }, compact = true)
+            }
+            if (events.size > visibleEvents.size) {
+                Text(
+                    text = stringResource(R.string.more_events_format, events.size - visibleEvents.size),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showFullDay(date) }
+                        .padding(top = 3.dp)
+                )
+            }
+        }
+    }
+}
+
+
+@Composable
+fun EnhancedCompactEventItem(event: Event, onClick: () -> Unit, isLast: Boolean) {
+    CompactEventRow(event = event, onClick = onClick, compact = true)
+}
+
+@Composable
+private fun CompactEventRow(
+    event: Event,
+    onClick: () -> Unit,
+    compact: Boolean = false
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(if (compact) 10.dp else 12.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = if (compact) 5.dp else 9.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .width(3.dp)
+                .height(if (compact) 34.dp else 44.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(courseTypeColor(event.courseType))
+        )
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    // Day of week with enhanced styling
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Text(
-                            text = getDayOfWeekDisplayName(date.dayOfWeek, full = false),
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.SemiBold,
-                            color = when {
-                                isToday -> MaterialTheme.colorScheme.primary
-                                else -> MaterialTheme.colorScheme.onSurfaceVariant
-                            }
-                        )
-
-                        // Today indicator
-                        if (isToday) {
-                            Surface(
-                                color = MaterialTheme.colorScheme.primary,
-                                shape = CircleShape,
-                                modifier = Modifier.size(6.dp)
-                            ) {}
-                        }
-                    }
-
-                    // Day number with enhanced typography
+                Text(
+                    text = event.summary,
+                    style = if (compact) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+                if (!event.courseType.isNullOrBlank()) {
                     Text(
-                        text = date.day.toString(),
-                        style = MaterialTheme.typography.headlineLarge,
+                        text = event.courseType,
+                        style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
-                        color = when {
-                            isToday -> MaterialTheme.colorScheme.primary
-                            else -> MaterialTheme.colorScheme.onSurface
-                        }
+                        color = courseTypeColor(event.courseType)
                     )
                 }
-
-                // Enhanced event count badge and time summary
-                if (events.isNotEmpty()) {
-                    // Time range indicator
-                    if (firstEvent != null && lastEvent != null) {
-                        Surface(
-                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Text(
-                                    text = formatTime(firstEvent.startDateTime),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                                Icon(
-                                    Icons.Default.ArrowDownward,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(12.dp)
-                                )
-                                Text(
-                                    text = formatTime(lastEvent.endDateTime),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        }
-                    }
-                }
             }
-
-            // Enhanced events section
-            if (events.isNotEmpty()) {
-                // Working time summary bar
-                if (totalWorkingMinutes > 0) {
-                    Surface(
-                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.DateRange,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.secondary,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Text(
-                                text = stringResource(
-                                    R.string.work_time_format,
-                                    formatDuration(totalWorkingMinutes)
-                                ),
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.secondary
-                            )
-                        }
-                    }
-                }
-
-                // Enhanced events list
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    events.take(3).forEachIndexed { index, event ->
-                        EnhancedCompactEventItem(
-                            event = event,
-                            onClick = { onEventClick(event) },
-                            isLast = index == minOf(2, events.size - 1)
-                        )
-                    }
-
-                    // More events indicator with better styling
-                    if (events.size > 3) {
-                        Surface(
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.fillMaxWidth(),
-                            onClick = {
-                                showFullDay(date)
-                            }
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(12.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = stringResource(
-                                        R.string.more_events_format,
-                                        events.size - 3
-                                    ),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                                Icon(
-                                    Icons.AutoMirrored.Filled.ArrowForward,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-            } else {
-                // Empty state with better styling
-                Surface(
-                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Box(
-                        modifier = Modifier.padding(16.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = stringResource(R.string.no_events),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
-                        )
-                    }
-                }
-            }
+            Text(
+                text = "${formatTime(event.startDateTime)} – ${formatTime(event.endDateTime)}" +
+                        event.location?.takeIf { it.isNotBlank() }?.let { " · $it" }.orEmpty(),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }
 
 @Composable
-fun EnhancedCompactEventItem(event: Event, onClick: () -> Unit, isLast: Boolean) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
-            .clickable(onClick = onClick)
-            .padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically
+private fun courseTypeColor(courseType: String?): Color = when (courseType) {
+    "CM" -> MaterialTheme.colorScheme.primary
+    "TDB" -> MaterialTheme.colorScheme.secondary
+    "TD" -> MaterialTheme.colorScheme.tertiary
+    else -> MaterialTheme.colorScheme.outline
+}
+
+@Composable
+private fun EmptyCalendarState(text: String) {
+    Box(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 40.dp),
+        contentAlignment = Alignment.Center
     ) {
-        // Event details
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            // Event title with improved typography
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = event.summary,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                if (!event.courseType.isNullOrBlank()) {
-                    Surface(
-                        color = when (event.courseType) {
-                            "CM" -> MaterialTheme.colorScheme.primaryContainer
-                            "TDB" -> MaterialTheme.colorScheme.secondaryContainer
-                            "TD" -> MaterialTheme.colorScheme.tertiaryContainer
-                            else -> MaterialTheme.colorScheme.primaryContainer
-                        },
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text(
-                            text = event.courseType,
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = when (event.courseType) {
-                                "CM" -> MaterialTheme.colorScheme.onPrimaryContainer
-                                "TDB" -> MaterialTheme.colorScheme.onSecondaryContainer
-                                "TD" -> MaterialTheme.colorScheme.onTertiaryContainer
-                                else -> MaterialTheme.colorScheme.onPrimaryContainer
-                            },
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
-                    }
-                }
-            }
-
-            // Time and duration information
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Start and end time
-                Row(
-                    modifier = Modifier.weight(1f),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = formatTime(event.startDateTime),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Icon(
-                        Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(12.dp)
-                    )
-                    Text(
-                        text = formatTime(event.endDateTime),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                // Duration
-                val startMinutes = event.startDateTime.hour * 60 + event.startDateTime.minute
-                val endMinutes = event.endDateTime.hour * 60 + event.endDateTime.minute
-                val durationMinutes = endMinutes - startMinutes
-                Surface(
-                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Text(
-                        text = formatDuration(durationMinutes),
-                        style = MaterialTheme.typography.labelMedium,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
-                }
-            }
-
-            // Location and instructor information with icons
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Location
-                if (!event.location.isNullOrBlank()) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(
-                            Icons.Default.LocationOn,
-                            contentDescription = stringResource(R.string.location_desc),
-                            tint = MaterialTheme.colorScheme.secondary,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Text(
-                            text = event.location,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                }
-
-                // Instructor
-                if (!event.instructor.isNullOrBlank()) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(
-                            Icons.Default.Person,
-                            contentDescription = stringResource(R.string.instructor_desc),
-                            tint = MaterialTheme.colorScheme.tertiary,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Text(
-                            text = event.instructor,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                }
-            }
-        }
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
     }
 }
+
 
 @Composable
 fun EnhancedEventCard(event: Event, onClick: () -> Unit) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .border(
-                width = 1.dp,
-                color = MaterialTheme.colorScheme.outline,
-                shape = RoundedCornerShape(20.dp)
-            ),
+        modifier = Modifier.fillMaxWidth(),
+        onClick = onClick,
+        shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface,
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
         ),
-        shape = RoundedCornerShape(20.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(20.dp)
-        ) {
-            // Header with course type badge and title
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
+        Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .width(4.dp)
+                        .height(44.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(courseTypeColor(event.courseType))
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text(
                         text = event.summary,
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
-                }
-
-                if (!event.courseType.isNullOrBlank()) {
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Surface(
-                        color = when (event.courseType) {
-                            "CM" -> MaterialTheme.colorScheme.primaryContainer
-                            "TDB" -> MaterialTheme.colorScheme.secondaryContainer
-                            "TD" -> MaterialTheme.colorScheme.tertiaryContainer
-                            else -> MaterialTheme.colorScheme.primaryContainer
-                        },
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text(
-                            text = event.courseType,
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = when (event.courseType) {
-                                "CM" -> MaterialTheme.colorScheme.onPrimaryContainer
-                                "TDB" -> MaterialTheme.colorScheme.onSecondaryContainer
-                                "TD" -> MaterialTheme.colorScheme.onTertiaryContainer
-                                else -> MaterialTheme.colorScheme.onPrimaryContainer
-                            },
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Time information with improved styling
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Surface(
-                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
-                    shape = CircleShape,
-                    modifier = Modifier.size(40.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            Icons.Default.DateRange,
-                            contentDescription = stringResource(R.string.time_desc),
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.width(16.dp))
-                Column {
                     Text(
-                        text = "${formatTime(event.startDateTime)} - ${formatTime(event.endDateTime)}",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    // Calculate duration in minutes
-                    val startMinutes = event.startDateTime.hour * 60 + event.startDateTime.minute
-                    val endMinutes = event.endDateTime.hour * 60 + event.endDateTime.minute
-                    val durationMinutes = endMinutes - startMinutes
-                    val hours = durationMinutes / 60
-                    val minutes = durationMinutes % 60
-                    val durationText = when {
-                        hours > 0 && minutes > 0 -> "${hours}h ${minutes}min"
-                        hours > 0 -> "${hours}h"
-                        else -> "${minutes}min"
-                    }
-                    Text(
-                        text = durationText,
-                        style = MaterialTheme.typography.bodySmall,
+                        text = "${formatTime(event.startDateTime)} – ${formatTime(event.endDateTime)}",
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-            }
-
-            // Location information
-            if (!event.location.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(12.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Surface(
-                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f),
-                        shape = CircleShape,
-                        modifier = Modifier.size(40.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                Icons.Default.LocationOn,
-                                contentDescription = stringResource(R.string.location_desc),
-                                tint = MaterialTheme.colorScheme.secondary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.width(16.dp))
+                if (!event.courseType.isNullOrBlank()) {
                     Text(
-                        text = event.location,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurface
+                        text = event.courseType,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = courseTypeColor(event.courseType)
                     )
                 }
             }
-
-            // Instructor information
-            if (!event.instructor.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(12.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Surface(
-                        color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.3f),
-                        shape = CircleShape,
-                        modifier = Modifier.size(40.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                Icons.Default.Person,
-                                contentDescription = stringResource(R.string.instructor_desc),
-                                tint = MaterialTheme.colorScheme.tertiary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Text(
-                        text = event.instructor,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-            }
-
-            // Groups information
-            if (event.groups.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(12.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Surface(
-                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
-                        shape = CircleShape,
-                        modifier = Modifier.size(40.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                Icons.Default.Group,
-                                contentDescription = stringResource(R.string.groups_desc),
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column {
-                        Text(
-                            text = stringResource(R.string.groups),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            event.groups.take(4).forEach { group ->
-                                Surface(
-                                    color = MaterialTheme.colorScheme.primaryContainer,
-                                    shape = RoundedCornerShape(8.dp)
-                                ) {
-                                    Text(
-                                        text = group,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.Medium,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                        modifier = Modifier.padding(
-                                            horizontal = 8.dp,
-                                            vertical = 4.dp
-                                        )
-                                    )
-                                }
-                            }
-                            if (event.groups.size > 4) {
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = stringResource(
-                                        R.string.more_format,
-                                        event.groups.size - 3
-                                    ),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    fontWeight = FontWeight.Medium
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Notes preview
-            if (!event.notes.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(16.dp))
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Text(
-                            text = stringResource(R.string.notes),
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = event.notes,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                            lineHeight = MaterialTheme.typography.bodyMedium.lineHeight.times(1.2f)
-                        )
-                    }
-                }
-            }
-
-            // Tap to view more indicator
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            val secondary = listOfNotNull(
+                event.location?.takeIf { it.isNotBlank() },
+                event.instructor?.takeIf { it.isNotBlank() }
+            ).joinToString(" · ")
+            if (secondary.isNotBlank()) {
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = stringResource(R.string.tap_for_details),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Icon(
-                    Icons.AutoMirrored.Filled.ArrowForward,
-                    contentDescription = stringResource(R.string.view_details),
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(16.dp)
+                    text = secondary,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
     }
 }
+
 
 @Composable
 fun EventDetailView(
     event: Event,
     onDismiss: () -> Unit
 ) {
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(0.dp), // Remove padding to use full width
-        verticalArrangement = Arrangement.spacedBy(0.dp)
-    ) {
-        // Header with gradient background
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                ),
-                shape = RoundedCornerShape(
-                    topStart = 28.dp,
-                    topEnd = 28.dp,
-                    bottomStart = 0.dp,
-                    bottomEnd = 0.dp
-                )
-            ) {
-                Column(
-                    modifier = Modifier.padding(24.dp)
-                ) {
-                    // Event title and course type
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.Top
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = event.summary,
-                                style = MaterialTheme.typography.headlineLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                lineHeight = MaterialTheme.typography.headlineLarge.lineHeight.times(
-                                    1.1f
-                                )
-                            )
-                        }
+    val durationMinutes = event.endDateTime.hour * 60 + event.endDateTime.minute -
+            (event.startDateTime.hour * 60 + event.startDateTime.minute)
 
-                        if (!event.courseType.isNullOrBlank()) {
-                            Spacer(modifier = Modifier.width(16.dp))
-                            Surface(
-                                color = when (event.courseType) {
-                                    "CM" -> MaterialTheme.colorScheme.primary
-                                    "TDB" -> MaterialTheme.colorScheme.secondary
-                                    "TD" -> MaterialTheme.colorScheme.tertiary
-                                    else -> MaterialTheme.colorScheme.primary
-                                },
-                                shape = RoundedCornerShape(16.dp)
-                            ) {
-                                Text(
-                                    text = event.courseType,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = when (event.courseType) {
-                                        "CM" -> MaterialTheme.colorScheme.onPrimary
-                                        "TDB" -> MaterialTheme.colorScheme.onSecondary
-                                        "TD" -> MaterialTheme.colorScheme.onTertiary
-                                        else -> MaterialTheme.colorScheme.onPrimary
-                                    },
-                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                                )
-                            }
-                        }
+    LazyColumn(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+        contentPadding = PaddingValues(bottom = 28.dp),
+        verticalArrangement = Arrangement.spacedBy(18.dp)
+    ) {
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = event.summary,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.weight(1f)
+                    )
+                    if (!event.courseType.isNullOrBlank()) {
+                        Text(
+                            text = event.courseType,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = courseTypeColor(event.courseType)
+                        )
                     }
+                }
+                Text(
+                    text = "${formatDate(event.startDateTime.date)} · ${getDayOfWeekDisplayName(event.startDateTime.date.dayOfWeek, full = true)}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        item {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                DetailMetric(stringResource(R.string.start), formatTime(event.startDateTime), Modifier.weight(1f))
+                DetailMetric(stringResource(R.string.end), formatTime(event.endDateTime), Modifier.weight(1f))
+                DetailMetric(stringResource(R.string.duration), formatDuration(durationMinutes), Modifier.weight(1f))
+            }
+        }
+        if (!event.location.isNullOrBlank()) {
+            item { DetailLine(Icons.Default.LocationOn, stringResource(R.string.location), event.location) }
+        }
+        if (!event.instructor.isNullOrBlank()) {
+            item { DetailLine(Icons.Default.Person, stringResource(R.string.instructor), event.instructor) }
+        }
+        if (event.groups.isNotEmpty()) {
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(stringResource(R.string.groups), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(event.groups.joinToString(" · "), style = MaterialTheme.typography.bodyLarge)
                 }
             }
         }
-
-        // Main content area
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                ),
-                shape = RoundedCornerShape(0.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    verticalArrangement = Arrangement.spacedBy(28.dp)
-                ) {
-                    // Time & Date Section
-                    EnhancedDetailSection(
-                        title = stringResource(R.string.schedule),
-                        icon = Icons.Default.DateRange,
-                        iconColor = MaterialTheme.colorScheme.primary
-                    ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column {
-                                    Text(
-                                        text = stringResource(R.string.date),
-                                        style = MaterialTheme.typography.labelLarge,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                    Text(
-                                        text = formatDate(event.startDateTime.date),
-                                        style = MaterialTheme.typography.titleLarge,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                }
-
-                                Surface(
-                                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
-                                    shape = RoundedCornerShape(12.dp)
-                                ) {
-                                    Text(
-                                        text = getDayOfWeekDisplayName(
-                                            event.startDateTime.date.dayOfWeek,
-                                            full = true
-                                        ),
-                                        style = MaterialTheme.typography.labelLarge,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.padding(
-                                            horizontal = 12.dp,
-                                            vertical = 6.dp
-                                        )
-                                    )
-                                }
-                            }
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                TimeDisplayCard(
-                                    label = stringResource(R.string.start),
-                                    time = formatTime(event.startDateTime),
-                                    modifier = Modifier.weight(1f)
-                                )
-
-                                Spacer(modifier = Modifier.width(16.dp))
-
-                                TimeDisplayCard(
-                                    label = stringResource(R.string.end),
-                                    time = formatTime(event.endDateTime),
-                                    modifier = Modifier.weight(1f)
-                                )
-                            }
-
-                            // Duration
-                            val startMinutes =
-                                event.startDateTime.hour * 60 + event.startDateTime.minute
-                            val endMinutes = event.endDateTime.hour * 60 + event.endDateTime.minute
-                            val durationMinutes = endMinutes - startMinutes
-
-                            Surface(
-                                color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
-                                shape = RoundedCornerShape(16.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(16.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.Center
-                                ) {
-                                    Icon(
-                                        Icons.Default.DateRange,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.secondary,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = stringResource(
-                                            R.string.duration_format,
-                                            formatDuration(durationMinutes)
-                                        ),
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.secondary
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    // Location Section
-                    if (!event.location.isNullOrBlank()) {
-                        EnhancedDetailSection(
-                            title = stringResource(R.string.location),
-                            icon = Icons.Default.LocationOn,
-                            iconColor = MaterialTheme.colorScheme.secondary
-                        ) {
-                            Surface(
-                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                shape = RoundedCornerShape(16.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text(
-                                    text = event.location,
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.Medium,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.padding(20.dp)
-                                )
-                            }
-                        }
-                    }
-
-                    // Instructor Section
-                    if (!event.instructor.isNullOrBlank()) {
-                        EnhancedDetailSection(
-                            title = stringResource(R.string.instructor),
-                            icon = Icons.Default.Person,
-                            iconColor = MaterialTheme.colorScheme.tertiary
-                        ) {
-                            Surface(
-                                color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.3f),
-                                shape = RoundedCornerShape(16.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text(
-                                    text = event.instructor,
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.Medium,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.padding(20.dp)
-                                )
-                            }
-                        }
-                    }
-
-                    // Groups Section
-                    if (event.groups.isNotEmpty()) {
-                        EnhancedDetailSection(
-                            title = stringResource(R.string.groups),
-                            icon = Icons.Default.Group,
-                            iconColor = MaterialTheme.colorScheme.primary
-                        ) {
-                            LazyRow(
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                contentPadding = PaddingValues(horizontal = 4.dp)
-                            ) {
-                                items(event.groups) { group ->
-                                    Surface(
-                                        color = MaterialTheme.colorScheme.primaryContainer,
-                                        shape = RoundedCornerShape(20.dp)
-                                    ) {
-                                        Text(
-                                            text = group,
-                                            style = MaterialTheme.typography.titleMedium,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                            modifier = Modifier.padding(
-                                                horizontal = 16.dp,
-                                                vertical = 8.dp
-                                            )
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // Notes Section
-                    if (!event.notes.isNullOrBlank()) {
-                        EnhancedDetailSection(
-                            title = stringResource(R.string.notes),
-                            icon = Icons.Default.School,
-                            iconColor = MaterialTheme.colorScheme.secondary
-                        ) {
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(
-                                        alpha = 0.5f
-                                    )
-                                ),
-                                shape = RoundedCornerShape(16.dp)
-                            ) {
-                                Text(
-                                    text = event.notes,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.padding(20.dp),
-                                    lineHeight = MaterialTheme.typography.bodyLarge.lineHeight.times(
-                                        1.4f
-                                    )
-                                )
-                            }
-                        }
-                    }
-
-                    // Additional Information Section
-                    if (!event.lastUpdated.isNullOrBlank()) {
-                        Surface(
-                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(16.dp),
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.last_updated),
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Text(
-                                    text = event.lastUpdated,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
-                                )
-                            }
-                        }
-                    }
-
-                    // Bottom padding
-                    Spacer(modifier = Modifier.height(32.dp))
+        if (!event.notes.isNullOrBlank()) {
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(stringResource(R.string.notes), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(event.notes, style = MaterialTheme.typography.bodyMedium)
                 }
+            }
+        }
+        if (!event.lastUpdated.isNullOrBlank()) {
+            item {
+                Text(
+                    text = "${stringResource(R.string.last_updated)}: ${event.lastUpdated}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }
 }
 
 @Composable
+private fun DetailMetric(label: String, value: String, modifier: Modifier = Modifier) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+@Composable
+private fun DetailLine(
+    icon: ImageVector,
+    label: String,
+    value: String
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(value, style = MaterialTheme.typography.bodyLarge)
+        }
+    }
+}
+
+
+@Composable
 fun EnhancedDetailSection(
     title: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    iconColor: androidx.compose.ui.graphics.Color,
+    icon: ImageVector,
+    iconColor: Color,
     content: @Composable () -> Unit
 ) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Surface(
-                color = iconColor.copy(alpha = 0.15f),
-                shape = CircleShape,
-                modifier = Modifier.size(40.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = iconColor,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-            Text(
-                text = title,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Icon(icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(18.dp))
+            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         }
         content()
     }
 }
 
+
 @Composable
-fun TimeDisplayCard(
-    label: String,
-    time: String,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
-        shape = RoundedCornerShape(16.dp),
-        modifier = modifier
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontWeight = FontWeight.Medium
-            )
-            Text(
-                text = time,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
-        }
+fun TimeDisplayCard(label: String, time: String, modifier: Modifier = Modifier) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(time, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
     }
 }
+
 
 @Composable
 fun DayCourseListView(
@@ -1914,504 +914,85 @@ fun DayCourseListView(
     onDismiss: () -> Unit
 ) {
     LazyColumn(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(0.dp),
-        verticalArrangement = Arrangement.spacedBy(0.dp)
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // Header
         item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                ),
-                shape = RoundedCornerShape(
-                    topStart = 28.dp,
-                    topEnd = 28.dp,
-                    bottomStart = 0.dp,
-                    bottomEnd = 0.dp
+            Column(modifier = Modifier.padding(bottom = 6.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(formatDate(date), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text(
+                    "${getDayOfWeekDisplayName(date.dayOfWeek, full = true)} · ${events.size}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-            ) {
-                Column(
-                    modifier = Modifier.padding(24.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                text = formatDate(date),
-                                style = MaterialTheme.typography.headlineLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            )
-                            Text(
-                                text = getDayOfWeekDisplayName(date.dayOfWeek, full = true),
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-                            )
-                        }
-
-                        Surface(
-                            color = MaterialTheme.colorScheme.primary,
-                            shape = CircleShape,
-                            modifier = Modifier.size(48.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Text(
-                                    text = events.size.toString(),
-                                    style = MaterialTheme.typography.headlineMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onPrimary
-                                )
-                            }
-                        }
-                    }
-                }
             }
         }
-
-        // Time Summary Section
-        if (events.isNotEmpty()) {
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    ),
-                    shape = RoundedCornerShape(0.dp)
-                ) {
-                    DayTimeSummary(
-                        modifier = Modifier.padding(
-                            start = 16.dp,
-                            end = 16.dp,
-                            top = 16.dp
-                        ), events = events
-                    )
-                }
-            }
-        }
-
-        // Course List
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                ),
-                shape = RoundedCornerShape(0.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    if (events.isEmpty()) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(32.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Icon(
-                                    Icons.Default.DateRange,
-                                    contentDescription = stringResource(R.string.no_events_desc),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(48.dp)
-                                )
-                                Text(
-                                    text = stringResource(R.string.no_courses_for_day),
-                                    style = MaterialTheme.typography.titleLarge,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    textAlign = TextAlign.Center
-                                )
-                            }
-                        }
-                    } else {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Surface(
-                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
-                                shape = CircleShape,
-                                modifier = Modifier.size(40.dp)
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(
-                                        Icons.Default.School,
-                                        contentDescription = stringResource(R.string.courses_icon_desc),
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-                            }
-                            Text(
-                                text = stringResource(R.string.courses),
-                                style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-
-                        events.forEach { event ->
-                            DayCourseItem(
-                                event = event,
-                                onClick = { onEventClick(event) }
-                            )
-                        }
-                    }
-
-                    // Bottom padding
-                    Spacer(modifier = Modifier.height(32.dp))
-                }
+        if (events.isEmpty()) {
+            item { EmptyCalendarState(stringResource(R.string.no_courses_for_day)) }
+        } else {
+            items(events) { event ->
+                DayCourseItem(event = event, onClick = { onEventClick(event) })
             }
         }
     }
 }
+
 
 @Composable
-fun DayCourseItem(
-    event: Event,
-    onClick: () -> Unit
-) {
+fun DayCourseItem(event: Event, onClick: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
+        onClick = onClick,
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceTint.copy(alpha = 0.1f)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
         ),
-        shape = RoundedCornerShape(20.dp),
-        onClick = onClick
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Column {
-            // Header section with title and course type badge
-            Row(
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(formatTime(event.startDateTime), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                Text(formatTime(event.endDateTime), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 16.dp, end = 16.dp, top = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
+                    .width(3.dp)
+                    .height(40.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(courseTypeColor(event.courseType))
+            )
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = event.summary,
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-
-                if (!event.courseType.isNullOrBlank()) {
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Surface(
-                        color = when (event.courseType) {
-                            "CM" -> MaterialTheme.colorScheme.primary
-                            "TDB" -> MaterialTheme.colorScheme.secondary
-                            "TD" -> MaterialTheme.colorScheme.tertiary
-                            else -> MaterialTheme.colorScheme.primary
-                        },
-                        shape = RoundedCornerShape(16.dp)
-                    ) {
-                        Text(
-                            text = event.courseType,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = when (event.courseType) {
-                                "CM" -> MaterialTheme.colorScheme.onPrimary
-                                "TDB" -> MaterialTheme.colorScheme.onSecondary
-                                "TD" -> MaterialTheme.colorScheme.onTertiary
-                                else -> MaterialTheme.colorScheme.onPrimary
-                            },
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                        )
-                    }
-                }
-            }
-
-            // Enhanced time section with visual divider
-            Surface(
-                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
-                shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(20.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Start time with icon
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        event.summary,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f)
-                    ) {
-                        Surface(
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
-                            shape = CircleShape,
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    Icons.Default.DateRange,
-                                    contentDescription = stringResource(R.string.start_time_desc),
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                        }
-                        Text(
-                            text = stringResource(R.string.start),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontWeight = FontWeight.Medium
-                        )
-                        Text(
-                            text = formatTime(event.startDateTime),
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-
-                    // Visual divider
-                    Box(
-                        modifier = Modifier
-                            .width(2.dp)
-                            .height(60.dp)
-                            .background(
-                                MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                                RoundedCornerShape(1.dp)
-                            )
                     )
-
-                    // End time with icon
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Surface(
-                            color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f),
-                            shape = CircleShape,
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    Icons.Default.DateRange,
-                                    contentDescription = stringResource(R.string.end_time_desc),
-                                    tint = MaterialTheme.colorScheme.secondary,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                        }
-                        Text(
-                            text = stringResource(R.string.end),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontWeight = FontWeight.Medium
-                        )
-                        Text(
-                            text = formatTime(event.endDateTime),
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.secondary
-                        )
-                    }
-
-                    // Visual divider
-                    Box(
-                        modifier = Modifier
-                            .width(2.dp)
-                            .height(60.dp)
-                            .background(
-                                MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                                RoundedCornerShape(1.dp)
-                            )
-                    )
-
-                    // Duration with icon
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Surface(
-                            color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f),
-                            shape = CircleShape,
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    Icons.Default.DateRange,
-                                    contentDescription = stringResource(R.string.duration_desc),
-                                    tint = MaterialTheme.colorScheme.tertiary,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                        }
-                        val startMinutes =
-                            event.startDateTime.hour * 60 + event.startDateTime.minute
-                        val endMinutes = event.endDateTime.hour * 60 + event.endDateTime.minute
-                        val durationMinutes = endMinutes - startMinutes
-                        Text(
-                            text = stringResource(R.string.duration),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontWeight = FontWeight.Medium
-                        )
-                        Text(
-                            text = formatDuration(durationMinutes),
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.secondary
-                        )
+                    if (!event.courseType.isNullOrBlank()) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(event.courseType, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = courseTypeColor(event.courseType))
                     }
                 }
-            }
-
-            // Location section with enhanced styling
-            if (!event.location.isNullOrBlank()) {
-                Surface(
-                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Surface(
-                            color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f),
-                            shape = CircleShape,
-                            modifier = Modifier.size(40.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    Icons.Default.LocationOn,
-                                    contentDescription = stringResource(R.string.location_desc),
-                                    tint = MaterialTheme.colorScheme.secondary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                        }
-                        Column {
-                            Text(
-                                text = stringResource(R.string.location),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Text(
-                                text = event.location,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Instructor section if available
-            if (!event.instructor.isNullOrBlank()) {
-                Surface(
-                    color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.3f),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Surface(
-                            color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f),
-                            shape = CircleShape,
-                            modifier = Modifier.size(40.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    Icons.Default.Person,
-                                    contentDescription = stringResource(R.string.instructor_desc),
-                                    tint = MaterialTheme.colorScheme.tertiary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                        }
-                        Column {
-                            Text(
-                                text = stringResource(R.string.instructor),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Text(
-                                text = event.instructor,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Enhanced call-to-action with better visual emphasis
-            Surface(
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                shape = RoundedCornerShape(bottomEnd = 16.dp, bottomStart = 16.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Surface(
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
-                            shape = CircleShape,
-                            modifier = Modifier.size(24.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    Icons.Default.School,
-                                    contentDescription = "Details",
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(12.dp)
-                                )
-                            }
-                        }
-                        Text(
-                            text = stringResource(R.string.tap_to_view_full_details),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                    Icon(
-                        Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = stringResource(R.string.view_details),
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
+                val secondary = listOfNotNull(
+                    event.location?.takeIf { it.isNotBlank() },
+                    event.instructor?.takeIf { it.isNotBlank() }
+                ).joinToString(" · ")
+                if (secondary.isNotBlank()) {
+                    Text(secondary, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
         }
     }
 }
+
 
 @Composable
 fun RestaurantMenuView(
